@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ems
+  namespace: elastic
+  labels:
+    app.kubernetes.io/name: ems
+    app.kubernetes.io/part-of: elk
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ems
+      app.kubernetes.io/part-of: elk
+      app.kubernetes.io/version: 8.2.3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ems
+        app.kubernetes.io/part-of: elk
+        app.kubernetes.io/version: 8.2.3
+    spec:
+      containers:
+        - name: ems
+          image: docker.elastic.co/elastic-maps-service/elastic-maps-server-ubi8:8.2.3
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: ems-config
+              mountPath: /usr/src/app/server/config/elastic-maps-server.yml
+              subPath: elastic-maps-server.yml
+            - name: ems-maps
+              mountPath: /usr/src/app/data/
+      volumes:
+        - name: ems-config
+          configMap:
+            name: ems-config
+        - name: ems-maps
+          hostPath:
+            path: /elastic-maps-service
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ems
+  namespace: elastic
+  labels:
+    app.kubernetes.io/name: ems
+    app.kubernetes.io/part-of: elk
+spec:
+  selector:
+    app.kubernetes.io/name: ems
+    app.kubernetes.io/part-of: elk
+    app.kubernetes.io/version: 8.2.3
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ems-config
+  namespace: elastic
+  labels:
+    app.kubernetes.io/name: ems
+    app.kubernetes.io/part-of: elk
+data:
+  elastic-maps-server.yml: |
+    elasticsearch.host: http://elasticsearch:9200
+    elasticsearch.username: elasticsearch
+    elasticsearch.password: changeme
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ems-maps
+  namespace: elastic
+  labels:
+    app.kubernetes.io/name: ems-maps
+    app.kubernetes.io/part-of: elk
+spec:
+  capacity:
+    storage: 1G
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: local-storage
+  local:
+    path: /elastic-maps-service
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - k3d-my-cluster-agent

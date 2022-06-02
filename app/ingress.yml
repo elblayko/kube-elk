@@ -1,0 +1,41 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: elasticsearch
+  namespace: elastic
+  labels:
+    app.kubernetes.io/name: elasticsearch
+    app.kubernetes.io/part-of: elk
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: kibana.elastic.local
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: kibana
+                port:
+                  number: 5601
+    - host: maps.elastic.local
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: elastic-maps
+                port:
+                  number: 8080
+    - host: es.elastic.local
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: elasticsearch
+                port:
+                  number: 9200
